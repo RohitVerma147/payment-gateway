@@ -1,0 +1,72 @@
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, CallbackContext
+import logging
+
+# Replace with your bot token from BotFather
+BOT_TOKEN = "8131939716:AAFKKLPmqsZzrSx9Piqm-lShx-jWuiuzTjQ"
+UPI_ID = "9927708851@okbizaxis"  # Replace with your actual UPI ID
+QR_CODE_PATH = "C:\\Users\\user\\Downloads\\qr.png.jpg"  # Corrected file path
+
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
+
+def get_amount_keyboard():
+    keyboard = [
+        [InlineKeyboardButton("Pay ₹799", callback_data="amount_799")],
+        [InlineKeyboardButton("Pay ₹499", callback_data="amount_499")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def get_payment_method_keyboard(amount):
+    keyboard = [
+        [InlineKeyboardButton("Pay via UPI", callback_data=f"upi_{amount}"), InlineKeyboardButton("Pay via QR Code", callback_data=f"qr_{amount}")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+async def start(update: Update, context: CallbackContext) -> None:
+    message = (
+        "Welcome to the Payment Bot!\n"
+        "Please select an amount to proceed with the payment."
+    )
+    await update.message.reply_text(message, reply_markup=get_amount_keyboard())
+
+async def amount_selected(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer()
+    
+    amount = "799" if query.data == "amount_799" else "499"
+    await query.message.reply_text(f"You selected ₹{amount}. Please choose a payment method:", reply_markup=get_payment_method_keyboard(amount))
+
+async def payment_method_selected(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer()
+    
+    method, amount = query.data.split("_")
+    
+    if method == "upi":
+        await query.message.reply_text(f"You chose to pay ₹{amount} via UPI. Please use the following UPI ID: `{UPI_ID}`.", parse_mode="Markdown")
+    elif method == "qr":
+        await query.message.reply_photo(photo=open(QR_CODE_PATH, "rb"), caption=f"Scan this QR code to pay ₹{amount}.")
+
+async def handle_screenshot(update: Update, context: CallbackContext) -> None:
+    user = update.message.from_user
+    file = update.message.photo[-1].file_id  # Get the highest quality image
+    logging.info(f"Received payment proof from {user.username or user.full_name}")
+
+    # Forward proof to admin (replace ADMIN_ID with your Telegram ID)
+    ADMIN_ID = 1069034002 # Replace with your Telegram ID
+    await context.bot.send_photo(chat_id=ADMIN_ID, photo=file, caption=f"Payment proof from {user.username or user.full_name}")
+
+    await update.message.reply_text("✅ Payment proof received! We will verify and confirm soon.")
+
+def main():
+    app = Application.builder().token(BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(amount_selected, pattern="^amount_"))
+    app.add_handler(CallbackQueryHandler(payment_method_selected, pattern="^(upi|qr)_"))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_screenshot))
+
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
