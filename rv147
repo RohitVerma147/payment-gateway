@@ -1,3 +1,7 @@
+git add requirements.txt runtime.txt
+git commit -m "Added build files for Railway"
+git push origin main
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, CallbackContext
 import logging
