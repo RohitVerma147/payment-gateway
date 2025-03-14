@@ -1,0 +1,4 @@
+cd path/to/your/bot  # Go to your bot's folder
+git add .
+git commit -m "Added requirements and runtime files"
+git push origin main
